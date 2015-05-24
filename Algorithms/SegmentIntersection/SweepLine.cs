@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CGUtilities;
+using CGUtilities.DataStructure;
 using CGUtilities.DataStructures;
 
 namespace CGAlgorithms.Algorithms.Segment_Intersections
@@ -15,10 +16,9 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
 
         public override void Run(List<Point> points, List<Line> lines, List<Polygon> polygons, ref List<Point> outPoints, ref List<Line> outLines, ref List<Polygon> outPolygons)
         {
-            //lines = new List<Line>();
-            //lines.Add(new Line(new Point(1, 0), new Point(0, 2)));
-            //lines.Add(new Line(new Point(0, 0), new Point(1, 1)));
-            segments = lines;
+            segments = new List<Line>();
+            for (int i = 0; i < lines.Count; ++i) //cuz it'll be edited during the run
+                segments.Add(new Line(new Point(lines[i].Start.X,lines[i].Start.Y),new Point(lines[i].End.X,lines[i].End.Y)));
             OrderedSet<Event> Q = new OrderedSet<Event>(comparerEventX);
             OrderedSet<Event> L = new OrderedSet<Event>(comparerEventY);
             initializeEvents(Q);
@@ -27,12 +27,29 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
                 Event curEvent = Q.First(); Q.RemoveFirst();
                 handleEvent(curEvent, L,Q, outPoints);
             }
+            Dictionary<PointComparer, int> hashP = new Dictionary<PointComparer, int>();
+            for (int i = 0; i < lines.Count; ++i) 
+            {
+                if(hashP.ContainsKey(new PointComparer(lines[i].Start)))
+                    hashP[new PointComparer(lines[i].Start)]++;
+                else
+                    hashP[new PointComparer(lines[i].Start)] = 1;
+
+                if (hashP.ContainsKey(new PointComparer(lines[i].End)))
+                    hashP[new PointComparer(lines[i].End)]++;
+                else
+                    hashP[new PointComparer(lines[i].End)] = 1;
+
+            }
+            foreach(KeyValuePair<PointComparer,int> v in hashP)
+                if(v.Value>1)
+                    outPoints.Add(v.Key.p);
         }
 
 
 
 
-        private void handleEvent(Event curEvent, OrderedSet<Event> L, OrderedSet<Event> Q,List<Point> outPoints)
+        private void handleEvent(Event curEvent, OrderedSet<Event> L, OrderedSet<Event> Q, List<Point> outPoints)
         {
             switch (curEvent.pType)
             {
@@ -51,7 +68,7 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
                         KeyValuePair<Event, Event> upLow = L.DirectUpperAndLower(curEvent);
                         if (upLow.Key != null && upLow.Value != null)
                             checkIntersection(upLow.Key, upLow.Value, Q, outPoints);
-                        L.Remove(curEvent);
+                        L.Remove(new Event(segments[curEvent.segIdx].Start, PointType.Start, curEvent.segIdx, null, null));
                         break;
                     }
                 case PointType.Intersection:
@@ -63,7 +80,8 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
                         if (lowlow != null)
                             checkIntersection(curEvent.upper,lowlow, Q, outPoints);
                         L.Remove(curEvent.upper); L.Remove(curEvent.lower);
-                        curEvent.lower.point = curEvent.upper.point = curEvent.point;
+                        curEvent.lower.point.X = curEvent.point.X;curEvent.lower.point.Y = curEvent.point.Y;
+                        curEvent.upper.point.X = curEvent.point.X; curEvent.upper.point.Y = curEvent.point.Y;
                         L.Add(curEvent.upper); L.Add(curEvent.lower);
                         break;
                     }
@@ -74,7 +92,6 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
 
         private void initializeEvents(OrderedSet<Event> Q)
         {
-
             for (int i = 0; i < segments.Count; ++i)
             {
                 if (segments[i].Start.X > segments[i].End.X)
@@ -126,7 +143,8 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
         }
         private int comparerEventX(Event x, Event y)
         {
-            if (x.pType!= PointType.Intersection && x.segIdx == y.segIdx)
+            if (x.pType == PointType.Start && y.pType == PointType.Start 
+                && x.segIdx == y.segIdx)
                 return 0;
             if (x.point.Equals(y.point))
                 return 0;
@@ -136,15 +154,28 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
         }
         private int comparerEventY(Event x, Event y)
         {
-            if (x.pType != PointType.Intersection && x.segIdx == y.segIdx)
+            if (x.pType == PointType.Start && y.pType == PointType.Start
+                && x.segIdx == y.segIdx)
                 return 0;
             if (x.point.Equals(y.point))
             {
                 if(segments[x.segIdx].End.Equals(segments[y.segIdx].End))
                     return 0;
-                return (segments[x.segIdx].End.Y < segments[y.segIdx].End.Y) ? -1 : 1;
+                double maxEX = Math.Max(segments[x.segIdx].End.X, segments[y.segIdx].End.X);
+
+                return lineVal(x, maxEX) < lineVal(y, maxEX) ? -1 : 1;
             }
-            return x.point.Y < y.point.Y ? -1 : 1;
+            double maxSX = Math.Max(x.point.X, y.point.X);
+            return lineVal(x, maxSX) < lineVal(y, maxSX) ? -1 : 1;
+        }
+        private double lineVal(Event line, double x)
+        { 
+            Line a= segments[line.segIdx];
+            if(Math.Abs(a.Start.X-a.End.X)<Constants.Epsilon)
+                return double.MaxValue;
+            double m = (a.End.Y - a.Start.Y)/ (a.End.X - a.Start.X);
+            double c = a.Start.Y - (a.Start.X * m);
+            return x * m + c;
         }
         public override string ToString()
         {
@@ -166,4 +197,5 @@ namespace CGAlgorithms.Algorithms.Segment_Intersections
         End,
         Intersection
     }
+    
 }

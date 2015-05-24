@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CGUtilities.DataStructure;
 
 namespace CGAlgorithms.Algorithms.ConvexHull
 {
@@ -60,6 +61,13 @@ namespace CGAlgorithms.Algorithms.ConvexHull
 
         public override void Run(List<Point> points, List<Line> lines, List<Polygon> polygons, ref List<Point> outPoints, ref List<Line> outLines, ref List<Polygon> outPolygons)
         {
+            HashSet<PointComparer> hashP = new HashSet<PointComparer>();
+            for (int i = 0; i < points.Count; ++i)
+                hashP.Add(new PointComparer(points[i]));
+            PointComparer[] res = hashP.ToArray();
+            points.Clear();
+            for (int i = 0; i < res.Length; ++i)
+                points.Add(res[i].p);
             if (points.Count < 4)
             {
                 outPoints = new List<Point>(points);

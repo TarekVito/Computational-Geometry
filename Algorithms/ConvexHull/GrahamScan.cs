@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CGUtilities.DataStructure;
 
 namespace CGAlgorithms.Algorithms.ConvexHull
 {
@@ -12,6 +13,13 @@ namespace CGAlgorithms.Algorithms.ConvexHull
         Point firstP;
         public override void Run(List<Point> points, List<Line> lines, List<Polygon> polygons, ref List<Point> outPoints, ref List<Line> outLines, ref List<Polygon> outPolygons)
         {
+            HashSet<PointComparer> hashP = new HashSet<PointComparer>();
+            for (int i = 0; i < points.Count; ++i)
+                hashP.Add(new PointComparer(points[i]));
+            PointComparer[] res = hashP.ToArray();
+            points.Clear();
+            for (int i = 0; i < res.Length; ++i)
+                points.Add(res[i].p);
             if (points.Count < 4)
             {
                 outPoints = new List<Point>(points);
@@ -55,8 +63,20 @@ namespace CGAlgorithms.Algorithms.ConvexHull
                 }
             }
             outPoints.AddRange(stk);
+            lastCase(outPoints);       
+            
         }
-
+        private void lastCase(List<Point> p)
+        {
+            Point p1 = p[0], p2 = p[1], np = p.Last();
+            
+            Enums.TurnType turn = HelperMethods.CheckTurn(new Line(p2, p1), np);
+            if (turn == Enums.TurnType.Right)
+                p.RemoveAt(0);
+            else if(turn == Enums.TurnType.Colinear)
+                if (HelperMethods.distance(p2, p1) < HelperMethods.distance(p2, np))
+                    p.RemoveAt(0);
+        }
         private int compPoints(Point x, Point y)
         {
             Point a = firstP;
